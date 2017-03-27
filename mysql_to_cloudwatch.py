@@ -2,7 +2,6 @@ import boto3
 # http://mysqlclient.readthedocs.io/en/latest/user_guide.html#mysqldb
 import MySQLdb
 
-print("started")
 
 DB_HOST = "mysql"
 LOG_GROUP_NAME = "mysql_to_cloudwatch-test"
@@ -17,19 +16,26 @@ def create_log_group(client, name):
         print("Creating log group...")
         client.create_log_group(logGroupName=name)
 
-def create_log_stream(client, group, stream):
+def get_log_stream(client, group, stream):
     response = client.describe_log_streams(
         logGroupName=group,
         logStreamNamePrefix=stream
     )
-    if response['logStreams']:
+    # http://stackoverflow.com/a/365934/358804
+    return next(iter(response['logStreams']), None)
+
+def create_log_stream(client, group, stream):
+    log_stream = get_log_stream(client, group, stream)
+    if log_stream:
         print("Log stream exists.")
+        return log_stream
     else:
         print("Creating log stream...")
         client.create_log_stream(
             logGroupName=group,
             logStreamName=stream
         )
+        return get_log_stream(client, group, stream)
 
 def datetime_to_ms_since_epoch(dt):
     return int(dt.timestamp() * 1000.0)
@@ -59,17 +65,23 @@ with db as cursor:
 
 cw_client = boto3.client('logs')
 create_log_group(cw_client, LOG_GROUP_NAME)
-create_log_stream(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
+log_stream = create_log_stream(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
+print(log_stream)
 
 with db as cursor:
     # TODO select since last time
     cursor.execute("SELECT event_time, command_type, argument FROM general_log")
     events = map(mysql_to_cw_log_event, cursor)
 
-    cw_client.put_log_events(
-        logGroupName=LOG_GROUP_NAME,
-        logStreamName=LOG_STREAM_NAME,
-        logEvents=list(events)
-    )
+    # http://stackoverflow.com/a/8686243/358804
+    log_args = {
+        'logGroupName': LOG_GROUP_NAME,
+        'logStreamName': LOG_STREAM_NAME,
+        'logEvents': list(events)
+    }
+    if 'uploadSequenceToken' in log_stream:
+        log_args['sequenceToken'] = log_stream['uploadSequenceToken']
+
+    cw_client.put_log_events(**log_args)
 
 print("DONE")
