@@ -1,4 +1,5 @@
 import boto3
+import datetime
 # http://mysqlclient.readthedocs.io/en/latest/user_guide.html#mysqldb
 import MySQLdb
 
@@ -60,12 +61,16 @@ def mysql_to_cw_log_event(row):
         'message': msg
     }
 
-def copy_general_logs(db, cw_client, group, stream):
+def copy_general_logs(db, cw_client, group, stream, since, seq_token=None):
     with db as cursor:
-        # TODO select since last time
-        cursor.execute("SELECT event_time, command_type, argument FROM general_log")
+        print("Retrieving events since {:%Y-%m-%d %H:%M}...".format(since))
+        cursor.execute("""
+            SELECT event_time, command_type, argument
+            FROM general_log
+            WHERE event_time > %s
+            """, (since,))
         events = list(map(mysql_to_cw_log_event, cursor))
-        print("Uploading {} events...".format(len(events)))
+        print("Uploading {:d} events...".format(len(events)))
 
         # http://stackoverflow.com/a/8686243/358804
         log_args = {
@@ -73,22 +78,26 @@ def copy_general_logs(db, cw_client, group, stream):
             'logStreamName': stream,
             'logEvents': events
         }
-        if 'uploadSequenceToken' in log_stream:
-            log_args['sequenceToken'] = log_stream['uploadSequenceToken']
+        if seq_token:
+            log_args['sequenceToken'] = seq_token
 
         cw_client.put_log_events(**log_args)
 
 
-db = MySQLdb.connect(host=DB_HOST, db="mysql")
-cw_client = boto3.client('logs')
+if __name__ == '__main__':
+    db = MySQLdb.connect(host=DB_HOST, db="mysql")
+    cw_client = boto3.client('logs')
 
-test_setup(db, cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
+    test_setup(db, cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
 
-log_stream = get_log_stream(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
-print(log_stream)
+    log_stream = get_log_stream(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
+    print(log_stream)
+    # fall back to epoch
+    timestamp = log_stream.get('lastEventTimestamp', 0) / 1000
+    since = datetime.datetime.utcfromtimestamp(timestamp)
+    seq_token = log_stream.get('uploadSequenceToken', None)
 
-# TODO fetch error log
+    # TODO copy error log
+    copy_general_logs(db, cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME, since, seq_token=seq_token)
 
-copy_general_logs(db, cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
-
-print("DONE")
+    print("DONE")
