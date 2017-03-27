@@ -1,3 +1,5 @@
+from ..src import cloudwatch
+
 # TODO test_create_log_group_present
 
 # TODO test_create_log_group_empty
