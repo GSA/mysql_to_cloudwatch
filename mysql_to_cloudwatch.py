@@ -31,6 +31,22 @@ def create_log_stream(client, group, stream):
             logStreamName=stream
         )
 
+def datetime_to_ms_since_epoch(dt):
+    return int(dt.timestamp() * 1000.0)
+
+def mysql_to_cw_log_event(row):
+    event_time = row[0]
+    cmd = row[4]
+    query = row[5].decode("utf-8")
+    msg = cmd
+    if query:
+        msg += ': ' + query
+
+    return {
+        'timestamp': datetime_to_ms_since_epoch(event_time),
+        'message': msg
+    }
+
 
 db = MySQLdb.connect(host=DB_HOST, db="mysql")
 
@@ -41,12 +57,6 @@ with db as cursor:
     cursor.execute("SET GLOBAL general_log = 'ON'")
     db.commit()
 
-with db as cursor:
-    cursor.execute("SHOW TABLES")
-    tables = cursor.fetchall()
-    for (table_name,) in tables:
-        print(table_name)
-
 cw_client = boto3.client('logs')
 create_log_group(cw_client, LOG_GROUP_NAME)
 create_log_stream(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
@@ -54,7 +64,12 @@ create_log_stream(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
 with db as cursor:
     # TODO select since last time
     cursor.execute("SELECT * FROM general_log")
-    for row in cursor:
-        print(row)
+    events = map(mysql_to_cw_log_event, cursor)
+
+    cw_client.put_log_events(
+        logGroupName=LOG_GROUP_NAME,
+        logStreamName=LOG_STREAM_NAME,
+        logEvents=list(events)
+    )
 
 print("DONE")
