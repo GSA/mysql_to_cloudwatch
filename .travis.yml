@@ -19,5 +19,6 @@ before_install:
 
 script:
   - docker --version
+  - cd tests
   - docker-compose up -d mysql
   - docker-compose up tests
