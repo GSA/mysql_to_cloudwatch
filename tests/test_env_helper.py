@@ -15,3 +15,8 @@ def test_optional():
         'db': 'mysql',
         'user': 'jane'
     }
+
+def test_junk():
+    env = {'DB_OTHER': 'foo'}
+    result = env_helper.get_db_kwargs(env)
+    assert result == {'db': 'mysql'}
