@@ -3,21 +3,13 @@ import boto3
 import MySQLdb
 import os
 from src import cloudwatch
+from src import env_helper
 from src import mysql
 
 
-DB_HOST = os.environ['DB_HOST']
-db_kwargs = {
-    'host': DB_HOST,
-    'db': 'mysql'
-}
-for key in ['user', 'passwd', 'port']:
-    env_var = "DB_{}".format(key.upper())
-    if env_var in os.environ:
-        db_kwargs[key] = os.environ[env_var]
-
+DB_KWARGS = env_helper.get_db_kwargs(os.environ)
 LOG_GROUP_NAME = os.environ['LOG_GROUP_NAME']
-LOG_STREAM_NAME = os.environ.get('LOG_STREAM_NAME', DB_HOST)
+LOG_STREAM_NAME = os.environ.get('LOG_STREAM_NAME', DB_KWARGS['host'])
 
 
 def test_setup(db, cw_client, group, stream):
@@ -31,7 +23,7 @@ def copy_general_logs(db, cw_client, group, stream, since, seq_token=None):
 
 
 if __name__ == '__main__':
-    db = MySQLdb.connect(**db_kwargs)
+    db = MySQLdb.connect(**DB_KWARGS)
     cw_client = boto3.client('logs')
 
     test_setup(db, cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
