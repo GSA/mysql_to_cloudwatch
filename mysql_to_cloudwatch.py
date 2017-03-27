@@ -36,8 +36,8 @@ def datetime_to_ms_since_epoch(dt):
 
 def mysql_to_cw_log_event(row):
     event_time = row[0]
-    cmd = row[4]
-    query = row[5].decode("utf-8")
+    cmd = row[1]
+    query = row[2].decode("utf-8")
     msg = cmd
     if query:
         msg += ': ' + query
@@ -63,7 +63,7 @@ create_log_stream(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
 
 with db as cursor:
     # TODO select since last time
-    cursor.execute("SELECT * FROM general_log")
+    cursor.execute("SELECT event_time, command_type, argument FROM general_log")
     events = map(mysql_to_cw_log_event, cursor)
 
     cw_client.put_log_events(
