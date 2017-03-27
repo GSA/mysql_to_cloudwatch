@@ -1,4 +1,4 @@
-# MySQL to CloudWatch Logs
+# MySQL to CloudWatch Logs [![Build Status](https://travis-ci.org/GSA/mysql_to_cloudwatch.svg?branch=master)](https://travis-ci.org/GSA/mysql_to_cloudwatch)
 
 This is a script that grabs logs from MySQL and sends them to CloudWatch Logs.
 
@@ -9,6 +9,17 @@ This is a script that grabs logs from MySQL and sends them to CloudWatch Logs.
     * [MySQL (self-hosted)](https://dev.mysql.com/doc/refman/5.7/en/server-logs.html)
 1. Create [a `.env` file](https://docs.docker.com/compose/environment-variables/#the-env-file) with your AWS connection environment variables.
 1. TODO
+
+## Running tests
+
+```sh
+cd tests
+
+docker-compose up -d mysql
+# alternatively, run in a separate terminal without the `-d`
+
+docker-compose up tests
+```
 
 ## See also
 
