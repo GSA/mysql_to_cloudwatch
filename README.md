@@ -1,4 +1,4 @@
-# MySQL to CloudWatch Logs
+# MySQL to CloudWatch Logs [![Build Status](https://travis-ci.org/GSA/mysql_to_cloudwatch.svg?branch=master)](https://travis-ci.org/GSA/mysql_to_cloudwatch)
 
 This is a script that grabs logs from MySQL and sends them to CloudWatch Logs.
 

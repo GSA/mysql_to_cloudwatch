@@ -1,0 +1,9 @@
+sudo: required
+language: python
+python:
+- '3.6'
+services:
+  - docker
+script:
+  - docker-compose up -d mysql
+  - docker-compose up tests
