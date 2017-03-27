@@ -17,6 +17,12 @@ services:
       - AWS_CONFIG_FILE
       - AWS_SHARED_CREDENTIALS_FILE
 
+      - DB_HOST=mysql
+      - DB_PASSWD
+      - DB_PORT
+      - DB_USER
+      - LOG_GROUP_NAME=mysql_to_cloudwatch-test
+
   mysql:
     image: mysql:5
     environment:
