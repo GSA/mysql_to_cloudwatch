@@ -9,6 +9,12 @@ LOG_GROUP_NAME = "mysql_to_cloudwatch-test"
 LOG_STREAM_NAME = DB_HOST
 
 
+def enable_logs(db):
+    with db as cursor:
+        cursor.execute("SET GLOBAL log_output = 'TABLE'")
+        cursor.execute("SET GLOBAL general_log = 'ON'")
+        db.commit()
+
 def create_log_group(client, name):
     response = client.describe_log_groups(logGroupNamePrefix=name)
     if response['logGroups']:
@@ -37,11 +43,7 @@ def create_log_stream(client, group, stream):
         )
 
 def test_setup(db, cw_client, group, stream):
-    with db as cursor:
-        cursor.execute("SET GLOBAL log_output = 'TABLE'")
-        cursor.execute("SET GLOBAL general_log = 'ON'")
-        db.commit()
-
+    enable_logs(db)
     create_log_group(cw_client, group)
     create_log_stream(cw_client, group, stream)
 
