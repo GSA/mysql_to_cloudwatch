@@ -2,14 +2,17 @@ import boto3
 # http://mysqlclient.readthedocs.io/en/latest/user_guide.html#mysqldb
 import MySQLdb
 import os
+import socket
 from src import cloudwatch
 from src import env_helper
 from src import mysql
 
 
 DB_KWARGS = env_helper.get_db_kwargs(os.environ)
+# default to the hostname of the current machine
+DB_HOST = DB_KWARGS.get('host', socket.gethostname())
 LOG_GROUP_NAME = os.environ['LOG_GROUP_NAME']
-LOG_STREAM_NAME = os.environ.get('LOG_STREAM_NAME', DB_KWARGS['host'])
+LOG_STREAM_NAME = os.environ.get('LOG_STREAM_NAME', DB_HOST)
 
 
 def test_setup(db, cw_client, group, stream):

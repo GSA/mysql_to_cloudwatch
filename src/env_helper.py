@@ -1,13 +1,9 @@
 def get_db_kwargs(env):
-    """http://mysqlclient.readthedocs.io/en/latest/user_guide.html#functions-and-attributes"""
+    # adapted from https://gist.github.com/afeld/79d82d70a7cee21b92b43165b4c79c54
 
-    db_kwargs = {
-        'host': env['DB_HOST'],
-        'db': 'mysql'
-    }
-
+    db_kwargs = {'db': 'mysql'}
     # optional database connection information
-    for key in ['user', 'passwd', 'port']:
+    for key in ['host', 'user', 'passwd', 'port']:
         env_var = "DB_{}".format(key.upper())
         if env_var in env:
             db_kwargs[key] = env[env_var]

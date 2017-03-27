@@ -1,12 +1,8 @@
 from ..src import env_helper
 
-def test_bare_minimum():
-    env = {'DB_HOST': 'foo.com'}
-    result = env_helper.get_db_kwargs(env)
-    assert result == {
-        'host': 'foo.com',
-        'db': 'mysql'
-    }
+def test_empty():
+    result = env_helper.get_db_kwargs({})
+    assert result == {'db': 'mysql'}
 
 def test_optional():
     env = {
