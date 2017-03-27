@@ -62,11 +62,28 @@ def mysql_to_cw_log_event(row):
         'message': msg
     }
 
+def get_latest_cw_event(cw_client, group, stream):
+    cw_events = cw_client.get_log_events(
+        logGroupName=group,
+        logStreamName=stream,
+        startFromHead=False,
+        limit=1
+    )
+
+    if cw_events['events']:
+        latest_event = cw_events['events'][0]
+        timestamp = latest_event['timestamp'] / 1000
+    else:
+        # no previous event - query since the epoch
+        timestamp = 0
+
+    return datetime.datetime.utcfromtimestamp(timestamp)
+
 def get_general_log_events(db, since):
     """Returns them in CloudWatch Logs format."""
 
     with db as cursor:
-        print("Retrieving events since {:%Y-%m-%d %H:%M}...".format(since))
+        print("Retrieving events since {:%Y-%m-%d %H:%M:%S}...".format(since))
         cursor.execute("""
             SELECT event_time, command_type, argument
             FROM general_log
@@ -101,11 +118,8 @@ if __name__ == '__main__':
 
     test_setup(db, cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
 
+    since = get_latest_cw_event(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
     log_stream = get_log_stream(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
-    print(log_stream)
-    # fall back to epoch
-    timestamp = log_stream.get('lastEventTimestamp', 0) / 1000
-    since = datetime.datetime.utcfromtimestamp(timestamp)
     seq_token = log_stream.get('uploadSequenceToken', None)
 
     # TODO copy error log
