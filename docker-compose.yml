@@ -1,0 +1,10 @@
+version: "3"
+services:
+  python:
+    build: .
+    links:
+      - mysql
+  mysql:
+    image: mysql
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
