@@ -4,6 +4,11 @@ python:
 - '3.6'
 services:
   - docker
+before_install:
+  # https://docs.travis-ci.com/user/docker/#Installing-a-newer-Docker-version
+  - sudo apt-get update
+  - sudo apt-get -y -o Dpkg::Options::="--force-confnew" install docker-engine
 script:
+  - docker --version
   - docker-compose up -d mysql
   - docker-compose up tests
