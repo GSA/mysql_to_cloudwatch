@@ -1,24 +1,28 @@
 import boto3
+# http://mysqlclient.readthedocs.io/en/latest/user_guide.html#mysqldb
 import MySQLdb
 
 print("started")
 
-db = MySQLdb.connect(host="mysql", db="mysql")
-c = db.cursor()
+DB_HOST = "mysql"
+
+db = MySQLdb.connect(host=DB_HOST, db="mysql")
 
 # TODO fetch error log
 
-c.execute("SET GLOBAL log_output = 'TABLE'")
-c.execute("SET GLOBAL general_log = 'ON'")
-db.commit()
+with db as cursor:
+    cursor.execute("SET GLOBAL log_output = 'TABLE'")
+    cursor.execute("SET GLOBAL general_log = 'ON'")
+    db.commit()
 
-c.execute("SHOW TABLES")
-tables = c.fetchall()
-for (table_name,) in tables:
-    print(table_name)
+with db as cursor:
+    cursor.execute("SHOW TABLES")
+    tables = cursor.fetchall()
+    for (table_name,) in tables:
+        print(table_name)
 
-# TODO select since last time
-c.execute("SELECT * FROM general_log")
-rows = c.fetchall()
-for row in rows:
-    print(row)
+with db as cursor:
+    # TODO select since last time
+    cursor.execute("SELECT * FROM general_log")
+    for row in cursor:
+        print(row)
