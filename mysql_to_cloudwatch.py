@@ -28,14 +28,21 @@ def create_log_stream(client, group, stream):
     log_stream = get_log_stream(client, group, stream)
     if log_stream:
         print("Log stream exists.")
-        return log_stream
     else:
         print("Creating log stream...")
         client.create_log_stream(
             logGroupName=group,
             logStreamName=stream
         )
-        return get_log_stream(client, group, stream)
+
+def test_setup(db, cw_client, group, stream):
+    with db as cursor:
+        cursor.execute("SET GLOBAL log_output = 'TABLE'")
+        cursor.execute("SET GLOBAL general_log = 'ON'")
+        db.commit()
+
+    create_log_group(cw_client, group)
+    create_log_stream(cw_client, group, stream)
 
 def datetime_to_ms_since_epoch(dt):
     return int(dt.timestamp() * 1000.0)
@@ -53,35 +60,35 @@ def mysql_to_cw_log_event(row):
         'message': msg
     }
 
+def copy_general_logs(db, cw_client, group, stream):
+    with db as cursor:
+        # TODO select since last time
+        cursor.execute("SELECT event_time, command_type, argument FROM general_log")
+        events = list(map(mysql_to_cw_log_event, cursor))
+        print("Uploading {} events...".format(len(events)))
+
+        # http://stackoverflow.com/a/8686243/358804
+        log_args = {
+            'logGroupName': group,
+            'logStreamName': stream,
+            'logEvents': events
+        }
+        if 'uploadSequenceToken' in log_stream:
+            log_args['sequenceToken'] = log_stream['uploadSequenceToken']
+
+        cw_client.put_log_events(**log_args)
+
 
 db = MySQLdb.connect(host=DB_HOST, db="mysql")
+cw_client = boto3.client('logs')
+
+test_setup(db, cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
+
+log_stream = get_log_stream(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
+print(log_stream)
 
 # TODO fetch error log
 
-with db as cursor:
-    cursor.execute("SET GLOBAL log_output = 'TABLE'")
-    cursor.execute("SET GLOBAL general_log = 'ON'")
-    db.commit()
-
-cw_client = boto3.client('logs')
-create_log_group(cw_client, LOG_GROUP_NAME)
-log_stream = create_log_stream(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
-print(log_stream)
-
-with db as cursor:
-    # TODO select since last time
-    cursor.execute("SELECT event_time, command_type, argument FROM general_log")
-    events = map(mysql_to_cw_log_event, cursor)
-
-    # http://stackoverflow.com/a/8686243/358804
-    log_args = {
-        'logGroupName': LOG_GROUP_NAME,
-        'logStreamName': LOG_STREAM_NAME,
-        'logEvents': list(events)
-    }
-    if 'uploadSequenceToken' in log_stream:
-        log_args['sequenceToken'] = log_stream['uploadSequenceToken']
-
-    cw_client.put_log_events(**log_args)
+copy_general_logs(db, cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
 
 print("DONE")
