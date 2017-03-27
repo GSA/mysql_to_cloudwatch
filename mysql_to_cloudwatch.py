@@ -52,6 +52,7 @@ def mysql_to_cw_log_event(row):
     event_time = row[0]
     cmd = row[1]
     query = row[2].decode("utf-8")
+
     msg = cmd
     if query:
         msg += ': ' + query
@@ -61,7 +62,9 @@ def mysql_to_cw_log_event(row):
         'message': msg
     }
 
-def copy_general_logs(db, cw_client, group, stream, since, seq_token=None):
+def get_general_log_events(db, since):
+    """Returns them in CloudWatch Logs format."""
+
     with db as cursor:
         print("Retrieving events since {:%Y-%m-%d %H:%M}...".format(since))
         cursor.execute("""
@@ -69,19 +72,27 @@ def copy_general_logs(db, cw_client, group, stream, since, seq_token=None):
             FROM general_log
             WHERE event_time > %s
             """, (since,))
-        events = list(map(mysql_to_cw_log_event, cursor))
-        print("Uploading {:d} events...".format(len(events)))
 
-        # http://stackoverflow.com/a/8686243/358804
-        log_args = {
-            'logGroupName': group,
-            'logStreamName': stream,
-            'logEvents': events
-        }
-        if seq_token:
-            log_args['sequenceToken'] = seq_token
+        events = map(mysql_to_cw_log_event, cursor)
+        return list(events)
 
-        cw_client.put_log_events(**log_args)
+def upload_logs(cw_client, group, stream, events, seq_token=None):
+    print("Uploading {:d} events...".format(len(events)))
+
+    # http://stackoverflow.com/a/8686243/358804
+    log_args = {
+        'logGroupName': group,
+        'logStreamName': stream,
+        'logEvents': events
+    }
+    if seq_token:
+        log_args['sequenceToken'] = seq_token
+
+    cw_client.put_log_events(**log_args)
+
+def copy_general_logs(db, cw_client, group, stream, since, seq_token=None):
+    events = get_general_log_events(db, since)
+    upload_logs(cw_client, group, stream, events, seq_token=seq_token)
 
 
 if __name__ == '__main__':
