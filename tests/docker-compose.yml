@@ -1,0 +1,13 @@
+version: "3"
+services:
+  tests:
+    build: ..
+    command: pytest
+    volumes:
+      - ..:/usr/src/app:ro
+    links:
+      - mysql
+  mysql:
+    image: mysql:5
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes

@@ -10,6 +10,17 @@ This is a script that grabs logs from MySQL and sends them to CloudWatch Logs.
 1. Create [a `.env` file](https://docs.docker.com/compose/environment-variables/#the-env-file) with your AWS connection environment variables.
 1. TODO
 
+## Running tests
+
+```sh
+cd tests
+
+docker-compose up -d mysql
+# alternatively, run in a separate terminal without the `-d`
+
+docker-compose up tests
+```
+
 ## See also
 
 * [Copying RDS logs to S3](https://github.com/ryanholland/rdslogs_to_s3)
