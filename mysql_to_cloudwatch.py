@@ -113,6 +113,9 @@ def copy_general_logs(db, cw_client, group, stream, since, seq_token=None):
     events = get_general_log_events(db, since)
     upload_logs(cw_client, group, stream, events, seq_token=seq_token)
 
+def get_seq_token(cw_client, group, stream):
+    log_stream = get_log_stream(cw_client, group, stream)
+    return log_stream.get('uploadSequenceToken', None)
 
 if __name__ == '__main__':
     db = MySQLdb.connect(host=DB_HOST, db="mysql")
@@ -121,8 +124,7 @@ if __name__ == '__main__':
     test_setup(db, cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
 
     since = get_latest_cw_event(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
-    log_stream = get_log_stream(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
-    seq_token = log_stream.get('uploadSequenceToken', None)
+    seq_token = get_seq_token(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
 
     # TODO copy error log
     copy_general_logs(db, cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME, since, seq_token=seq_token)
