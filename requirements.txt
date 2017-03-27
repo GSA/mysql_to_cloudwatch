@@ -1,0 +1,2 @@
+boto3~=1.4
+mysqlclient~=1.3
