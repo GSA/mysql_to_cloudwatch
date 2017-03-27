@@ -3,8 +3,8 @@ services:
   python:
     build: .
     volumes:
-      - .:/usr/src/app:ro
-      - ~/.aws:/root/.aws:ro
+      - .:/usr/src/app
+      - ~/.aws:/root/.aws
     links:
       - mysql
     environment:
