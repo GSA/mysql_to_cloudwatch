@@ -4,8 +4,19 @@ services:
     build: .
     volumes:
       - .:/usr/src/app
+      - ~/.aws:/root/.aws
     links:
       - mysql
+    environment:
+      # http://boto3.readthedocs.io/en/latest/guide/configuration.html#environment-variable-configuration
+      - AWS_ACCESS_KEY_ID
+      - AWS_SECRET_ACCESS_KEY
+      - AWS_SESSION_TOKEN
+      - AWS_DEFAULT_REGION
+      - AWS_PROFILE
+      - AWS_CONFIG_FILE
+      - AWS_SHARED_CREDENTIALS_FILE
+
   mysql:
     image: mysql:5
     environment:
