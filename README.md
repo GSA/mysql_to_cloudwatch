@@ -21,6 +21,10 @@ docker-compose up -d mysql
 docker-compose up tests
 ```
 
+## Troubleshooting
+
+If you get an error about "signature expired" or anything else related to timing, it is a [clock drift bug in Docker](https://forums.docker.com/t/time-in-container-is-out-of-sync/16566). Restart Docker for Mac/Windows.
+
 ## See also
 
 * [Copying RDS logs to S3](https://github.com/ryanholland/rdslogs_to_s3)
