@@ -1,6 +1,6 @@
 import boto3
-# http://mysqlclient.readthedocs.io/en/latest/user_guide.html#mysqldb
-import MySQLdb
+# https://pymysql.readthedocs.io/en/latest/
+import pymysql
 import os
 import socket
 from src import cloudwatch
@@ -26,7 +26,7 @@ def copy_general_logs(db, cw_client, group, stream, since, seq_token=None):
 
 
 if __name__ == '__main__':
-    db = MySQLdb.connect(**DB_KWARGS)
+    db = pymysql.connect(**DB_KWARGS)
     cw_client = boto3.client('logs')
 
     test_setup(db, cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)

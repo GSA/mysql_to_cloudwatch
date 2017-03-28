@@ -1,5 +1,5 @@
 def enable_logs(db):
-    with db as cursor:
+    with db.cursor() as cursor:
         cursor.execute("SET GLOBAL log_output = 'TABLE'")
         cursor.execute("SET GLOBAL general_log = 'ON'")
         db.commit()
@@ -24,7 +24,7 @@ def mysql_to_cw_log_event(row):
 def get_general_log_events(db, since):
     """Returns them in CloudWatch Logs format."""
 
-    with db as cursor:
+    with db.cursor() as cursor:
         print("Retrieving events since {:%Y-%m-%d %H:%M:%S}...".format(since))
         cursor.execute("""
             SELECT event_time, command_type, argument
