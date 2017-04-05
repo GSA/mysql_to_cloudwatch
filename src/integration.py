@@ -3,13 +3,14 @@ def set_up_logs(db, cw):
     cw.create_log_group()
     cw.create_log_stream()
 
-def copy_general_logs(db, cw, since, seq_token=None):
-    events = db.get_general_log_events(since)
-    cw.upload_logs(events, seq_token=seq_token)
+def get_new_db_events(db, cw):
+    since = cw.get_latest_cw_event()
+    return db.get_general_log_events(since)
+
+def copy_new_general_logs(db, cw):
+    events = get_new_db_events(db, cw)
+    cw.upload_logs(events)
 
 def run(db, cw):
-    since = cw.get_latest_cw_event()
-    seq_token = cw.get_seq_token()
-
     # TODO copy error log
-    copy_general_logs(db, cw, since, seq_token=seq_token)
+    copy_new_general_logs(db, cw)
