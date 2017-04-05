@@ -42,6 +42,19 @@ def test_clear_logs(conn, db):
     db.clear_logs()
     assert db.num_log_events() == BASELINE_NUM_EVENTS
 
-# TODO test_get_general_log_events
+def test_get_general_log_events(db):
+    query = "SELECT * FROM general_log WHERE command_type = 'foo'"
+    with db.cursor() as cursor:
+        cursor.execute(query)
+        db.commit()
+    since = datetime.datetime.utcfromtimestamp(0)
 
-# TODO test_get_general_log_events_empty
+    events = mysql.get_general_log_events(db, since)
+
+    assert len(events) == BASELINE_NUM_EVENTS + 2
+    assert query in events[1]['message']
+
+def test_get_general_log_events_empty(db):
+    since = datetime.datetime.utcfromtimestamp(0)
+    events = mysql.get_general_log_events(db, since)
+    assert len(events) == BASELINE_NUM_EVENTS
