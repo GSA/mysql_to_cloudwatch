@@ -1,64 +1,71 @@
+import boto3
 import datetime
 
 
-def create_log_group(client, name):
-    response = client.describe_log_groups(logGroupNamePrefix=name)
-    if response['logGroups']:
-        print("Log group exists.")
-    else:
-        print("Creating log group...")
-        client.create_log_group(logGroupName=name)
+class CloudWatch:
+    def __init__(self, group, stream):
+        self.client = boto3.client('logs')
+        self.group = group
+        self.stream = stream
 
-def get_log_stream(client, group, stream):
-    response = client.describe_log_streams(
-        logGroupName=group,
-        logStreamNamePrefix=stream
-    )
-    # http://stackoverflow.com/a/365934/358804
-    return next(iter(response['logStreams']), None)
+    def create_log_group(self):
+        response = self.client.describe_log_groups(logGroupNamePrefix=self.group)
+        if response['logGroups']:
+            print("Log group exists.")
+        else:
+            print("Creating log group...")
+            self.client.create_log_group(logGroupName=self.group)
 
-def create_log_stream(client, group, stream):
-    log_stream = get_log_stream(client, group, stream)
-    if log_stream:
-        print("Log stream exists.")
-    else:
-        print("Creating log stream...")
-        client.create_log_stream(
-            logGroupName=group,
-            logStreamName=stream
+    def get_log_stream(self):
+        response = self.client.describe_log_streams(
+            logGroupName=self.group,
+            logStreamNamePrefix=self.stream
+        )
+        # http://stackoverflow.com/a/365934/358804
+        return next(iter(response['logStreams']), None)
+
+    def create_log_stream(self):
+        log_stream = self.get_log_stream()
+        if log_stream:
+            print("Log stream exists.")
+        else:
+            print("Creating log stream...")
+            self.client.create_log_stream(
+                logGroupName=self.group,
+                logStreamName=self.stream
+            )
+
+    def get_latest_cw_event(self):
+        events = self.client.get_log_events(
+            logGroupName=self.group,
+            logStreamName=self.stream,
+            startFromHead=False,
+            limit=1
         )
 
-def get_latest_cw_event(cw_client, group, stream):
-    cw_events = cw_client.get_log_events(
-        logGroupName=group,
-        logStreamName=stream,
-        startFromHead=False,
-        limit=1
-    )
+        if events['events']:
+            latest_event = events['events'][0]
+            timestamp = latest_event['timestamp'] / 1000
+        else:
+            # no previous event - query since the epoch
+            timestamp = 0
 
-    if cw_events['events']:
-        latest_event = cw_events['events'][0]
-        timestamp = latest_event['timestamp'] / 1000
-    else:
-        # no previous event - query since the epoch
-        timestamp = 0
+        return datetime.datetime.utcfromtimestamp(timestamp)
 
-    return datetime.datetime.utcfromtimestamp(timestamp)
+    def upload_logs(self, events, seq_token=None):
+        print("Uploading {:d} events...".format(len(events)))
 
-def upload_logs(cw_client, group, stream, events, seq_token=None):
-    print("Uploading {:d} events...".format(len(events)))
+        # http://stackoverflow.com/a/8686243/358804
+        log_args = {
+            'logGroupName': self.group,
+            'logStreamName': self.stream,
+            'logEvents': events
+        }
+        if seq_token:
+            log_args['sequenceToken'] = seq_token
 
-    # http://stackoverflow.com/a/8686243/358804
-    log_args = {
-        'logGroupName': group,
-        'logStreamName': stream,
-        'logEvents': events
-    }
-    if seq_token:
-        log_args['sequenceToken'] = seq_token
+        self.client.put_log_events(**log_args)
 
-    cw_client.put_log_events(**log_args)
-
-def get_seq_token(cw_client, group, stream):
-    log_stream = get_log_stream(cw_client, group, stream)
-    return log_stream.get('uploadSequenceToken', None)
+    def get_seq_token(self):
+        log_stream = self.get_log_stream()
+        return log_stream.get('uploadSequenceToken', None)

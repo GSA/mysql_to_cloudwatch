@@ -1,18 +1,15 @@
-from . import cloudwatch
-
-
-def set_up_logs(db, cw_client, group, stream):
+def set_up_logs(db, cw):
     db.enable_logs()
-    cloudwatch.create_log_group(cw_client, group)
-    cloudwatch.create_log_stream(cw_client, group, stream)
+    cw.create_log_group()
+    cw.create_log_stream()
 
-def copy_general_logs(db, cw_client, group, stream, since, seq_token=None):
+def copy_general_logs(db, cw, since, seq_token=None):
     events = db.get_general_log_events(since)
-    cloudwatch.upload_logs(cw_client, group, stream, events, seq_token=seq_token)
+    cw.upload_logs(events, seq_token=seq_token)
 
-def run(db, cw_client, group, stream):
-    since = cloudwatch.get_latest_cw_event(cw_client, group, stream)
-    seq_token = cloudwatch.get_seq_token(cw_client, group, stream)
+def run(db, cw):
+    since = cw.get_latest_cw_event()
+    seq_token = cw.get_seq_token()
 
     # TODO copy error log
-    copy_general_logs(db, cw_client, group, stream, since, seq_token=seq_token)
+    copy_general_logs(db, cw, since, seq_token=seq_token)
