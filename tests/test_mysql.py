@@ -5,7 +5,7 @@ from ..src import mysql
 
 
 # the number of events that will show up after clear_logs()
-BASELINE_NUM_EVENTS = 2
+BASELINE_NUM_EVENTS = 1
 
 
 @pytest.fixture
@@ -37,24 +37,29 @@ def test_clear_logs(conn, db):
     with conn.cursor() as cursor:
         cursor.execute("SELECT * FROM general_log")
         conn.commit()
-    assert db.num_log_events() == BASELINE_NUM_EVENTS + 2
+    assert db.num_log_events() == BASELINE_NUM_EVENTS + 3
 
     db.clear_logs()
-    assert db.num_log_events() == BASELINE_NUM_EVENTS
+    assert db.num_log_events() == BASELINE_NUM_EVENTS + 1
 
-def test_get_general_log_events(db):
-    query = "SELECT * FROM general_log WHERE command_type = 'foo'"
-    with db.cursor() as cursor:
-        cursor.execute(query)
-        db.commit()
+def test_get_general_log_events(conn, db):
+    num_queries = 3
+    queries = ["SELECT {:d}".format(i) for i in range(num_queries)]
+    with conn.cursor() as cursor:
+        for query in queries:
+            cursor.execute(query)
+        conn.commit()
     since = datetime.datetime.utcfromtimestamp(0)
 
-    events = mysql.get_general_log_events(db, since)
+    events = db.get_general_log_events(since)
 
-    assert len(events) == BASELINE_NUM_EVENTS + 2
-    assert query in events[1]['message']
+    for i in range(num_queries):
+        event = events[BASELINE_NUM_EVENTS + i]
+        actual = event['message']
+        expected = "Query: {}".format(queries[i])
+        assert actual == expected
 
 def test_get_general_log_events_empty(db):
     since = datetime.datetime.utcfromtimestamp(0)
-    events = mysql.get_general_log_events(db, since)
-    assert len(events) == BASELINE_NUM_EVENTS
+    events = db.get_general_log_events(since)
+    assert len(events) == BASELINE_NUM_EVENTS + 1
