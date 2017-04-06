@@ -25,6 +25,17 @@ class MySQL:
             cursor.execute("SET GLOBAL general_log = 'ON'")
             self.conn.commit()
 
+    def clear_logs(self):
+        with self.conn.cursor() as cursor:
+            # http://stackoverflow.com/a/12247102/358804
+            cursor.execute("TRUNCATE TABLE general_log")
+            self.conn.commit()
+
+    def num_log_events(self):
+        with self.conn.cursor() as cursor:
+            cursor.execute("SELECT COUNT(*) FROM general_log")
+            return cursor.fetchone()[0]
+
     def get_general_log_events(self, since):
         """Returns them in CloudWatch Logs format."""
 
