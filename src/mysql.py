@@ -1,9 +1,3 @@
-def enable_logs(db):
-    with db.cursor() as cursor:
-        cursor.execute("SET GLOBAL log_output = 'TABLE'")
-        cursor.execute("SET GLOBAL general_log = 'ON'")
-        db.commit()
-
 def datetime_to_ms_since_epoch(dt):
     return int(dt.timestamp() * 1000.0)
 
@@ -21,16 +15,26 @@ def mysql_to_cw_log_event(row):
         'message': msg
     }
 
-def get_general_log_events(db, since):
-    """Returns them in CloudWatch Logs format."""
+class MySQL:
+    def __init__(self, conn):
+        self.conn = conn
 
-    with db.cursor() as cursor:
-        print("Retrieving events since {:%Y-%m-%d %H:%M:%S}...".format(since))
-        cursor.execute("""
-            SELECT event_time, command_type, argument
-            FROM general_log
-            WHERE event_time > %s
-            """, (since,))
+    def enable_logs(self):
+        with self.conn.cursor() as cursor:
+            cursor.execute("SET GLOBAL log_output = 'TABLE'")
+            cursor.execute("SET GLOBAL general_log = 'ON'")
+            self.conn.commit()
 
-        events = map(mysql_to_cw_log_event, cursor)
-        return list(events)
+    def get_general_log_events(self, since):
+        """Returns them in CloudWatch Logs format."""
+
+        with self.conn.cursor() as cursor:
+            print("Retrieving events since {:%Y-%m-%d %H:%M:%S}...".format(since))
+            cursor.execute("""
+                SELECT event_time, command_type, argument
+                FROM general_log
+                WHERE event_time > %s
+                """, (since,))
+
+            events = map(mysql_to_cw_log_event, cursor)
+            return list(events)
