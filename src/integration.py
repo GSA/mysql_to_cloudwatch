@@ -9,7 +9,10 @@ def get_new_db_events(db, cw):
 
 def copy_new_general_logs(db, cw):
     events = get_new_db_events(db, cw)
-    cw.upload_logs(events)
+    # CloudWatch Logs complains if trying to send zero events
+    # http://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html#CWL-PutLogEvents-request-logEvents
+    if events:
+        cw.upload_logs(events)
 
 def run(db, cw):
     # TODO copy error log
