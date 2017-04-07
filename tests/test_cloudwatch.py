@@ -1,3 +1,6 @@
+import boto3
+from botocore.stub import Stubber
+from doubles import expect
 from ..src import cloudwatch
 
 # TODO test_create_log_group_present
@@ -12,6 +15,29 @@ from ..src import cloudwatch
 
 # TODO test_create_log_stream_empty
 
-# TODO test_upload_logs
+def test_upload_logs_without_seq_token():
+    client = boto3.client('logs', region_name='us-east-1')
+    events = [
+        {
+            'timestamp': 1000,
+            'message': 'foo'
+        }
+    ]
 
-# TODO test_upload_logs_without_seq_token
+    stubber = Stubber(client)
+    response = {}
+    expected_params = {
+        'logGroupName': 'somegroup',
+        'logStreamName': 'somestream',
+        'logEvents': events
+    }
+
+    stubber.add_response('put_log_events', response, expected_params)
+    stubber.activate()
+
+    cw = cloudwatch.CloudWatch(client, 'somegroup', 'somestream')
+    expect(cw).get_seq_token.and_return(None)
+
+    cw.upload_logs(events)
+
+# TODO test_upload_logs_with_seq_token
