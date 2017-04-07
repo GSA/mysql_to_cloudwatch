@@ -1,3 +1,5 @@
+import boto3
+from botocore.stub import Stubber
 from doubles import expect, ObjectDouble
 import pytest
 from ..src import cloudwatch
@@ -12,9 +14,12 @@ def db():
     return ObjectDouble(db)
 
 @pytest.fixture
-def cw():
-    client = object()
-    cw = cloudwatch.CloudWatch(client, 'somegroup', 'somestream')
+def cw_client():
+    return boto3.client('logs', region_name='us-east-1')
+
+@pytest.fixture
+def cw(cw_client):
+    cw = cloudwatch.CloudWatch(cw_client, 'somegroup', 'somestream')
     return ObjectDouble(cw)
 
 def test_copy_new_general_logs(db, cw):
@@ -27,11 +32,5 @@ def test_copy_new_general_logs(db, cw):
     ]
     expect(db).get_general_log_events.and_return(events)
     expect(cw).upload_logs.with_args(events)
-
-    integration.copy_new_general_logs(db, cw)
-
-def test_copy_new_general_logs_empty(db, cw):
-    expect(cw).get_latest_cw_event.and_return(None)
-    expect(db).get_general_log_events.and_return([])
 
     integration.copy_new_general_logs(db, cw)

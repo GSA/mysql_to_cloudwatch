@@ -52,6 +52,11 @@ class CloudWatch:
         return datetime.datetime.utcfromtimestamp(timestamp)
 
     def upload_logs(self, events):
+        # CloudWatch Logs complains if trying to send zero events
+        # http://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html#CWL-PutLogEvents-request-logEvents
+        if not events:
+            return
+
         print("Uploading {:d} events...".format(len(events)))
 
         # http://stackoverflow.com/a/8686243/358804
