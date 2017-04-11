@@ -1,3 +1,6 @@
+from . import time_helper
+
+
 def datetime_to_ms_since_epoch(dt):
     return int(dt.timestamp() * 1000.0)
 
@@ -40,7 +43,7 @@ class MySQL:
         """Returns them in CloudWatch Logs format."""
 
         with self.conn.cursor() as cursor:
-            print("Retrieving events since {:%Y-%m-%d %H:%M:%S}...".format(since))
+            print("Retrieving events from MySQL since {}...".format(time_helper.datetime_str(since)))
             # TODO remove hack for only being able to upload < 10000 events at a time
             # http://stackoverflow.com/a/12125925/358804
             cursor.execute("""

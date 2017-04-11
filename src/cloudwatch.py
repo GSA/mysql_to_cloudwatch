@@ -1,4 +1,5 @@
 import datetime
+from . import time_helper
 
 
 class CloudWatch:
@@ -57,7 +58,13 @@ class CloudWatch:
         if not events:
             return
 
-        print("Uploading {:d} events...".format(len(events)))
+        first_time = events[0]['timestamp']
+        last_time = events[-1]['timestamp']
+        print("Uploading {:d} events, from {} to {}...".format(
+            len(events),
+            time_helper.timestamp_str(first_time),
+            time_helper.timestamp_str(last_time)
+        ))
 
         # http://stackoverflow.com/a/8686243/358804
         log_args = {
