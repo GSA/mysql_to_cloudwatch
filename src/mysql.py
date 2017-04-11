@@ -1,3 +1,6 @@
+from contextlib import contextmanager
+
+
 def datetime_to_ms_since_epoch(dt):
     return int(dt.timestamp() * 1000.0)
 
@@ -19,27 +22,33 @@ class MySQL:
     def __init__(self, conn):
         self.conn = conn
 
-    def enable_logs(self):
+    @contextmanager
+    def transact(self):
+        """Run a block within a transaction."""
+
         with self.conn.cursor() as cursor:
+            yield cursor
+            self.conn.commit()
+
+    def enable_logs(self):
+        with self.transact() as cursor:
             cursor.execute("SET GLOBAL log_output = 'TABLE'")
             cursor.execute("SET GLOBAL general_log = 'ON'")
-            self.conn.commit()
 
     def clear_logs(self):
-        with self.conn.cursor() as cursor:
+        with self.transact() as cursor:
             # http://stackoverflow.com/a/12247102/358804
             cursor.execute("TRUNCATE TABLE general_log")
-            self.conn.commit()
 
     def num_log_events(self):
-        with self.conn.cursor() as cursor:
+        with self.transact() as cursor:
             cursor.execute("SELECT COUNT(*) FROM general_log")
             return cursor.fetchone()[0]
 
     def get_general_log_events(self, since, limit=1000):
         """Returns them in CloudWatch Logs format."""
 
-        with self.conn.cursor() as cursor:
+        with self.transact() as cursor:
             print("Retrieving events since {:%Y-%m-%d %H:%M:%S}...".format(since))
             # TODO remove hack for only being able to upload < 10000 events at a time
             # http://stackoverflow.com/a/12125925/358804
