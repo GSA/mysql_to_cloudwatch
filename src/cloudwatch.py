@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 from . import time_helper
 
 
@@ -50,7 +50,7 @@ class CloudWatch:
             # no previous event - query since the epoch
             timestamp = 0
 
-        return datetime.datetime.utcfromtimestamp(timestamp)
+        return datetime.fromtimestamp(timestamp, timezone.utc)
 
     def upload_logs(self, events):
         # CloudWatch Logs complains if trying to send zero events

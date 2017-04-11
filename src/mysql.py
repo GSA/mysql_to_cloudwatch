@@ -1,3 +1,4 @@
+import pytz
 from . import time_helper
 
 
@@ -5,6 +6,10 @@ def mysql_to_cw_log_event(row):
     event_time = row[0]
     cmd = row[1]
     query = row[2].decode("utf-8")
+
+    if not event_time.tzname():
+        # assume UTC
+        event_time = pytz.utc.localize(event_time)
 
     msg = cmd
     if query:
