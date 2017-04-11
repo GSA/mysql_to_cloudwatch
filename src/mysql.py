@@ -1,9 +1,6 @@
 from . import time_helper
 
 
-def datetime_to_ms_since_epoch(dt):
-    return int(dt.timestamp() * 1000.0)
-
 def mysql_to_cw_log_event(row):
     event_time = row[0]
     cmd = row[1]
@@ -14,7 +11,7 @@ def mysql_to_cw_log_event(row):
         msg += ': ' + query
 
     return {
-        'timestamp': datetime_to_ms_since_epoch(event_time),
+        'timestamp': time_helper.datetime_to_ms_since_epoch(event_time),
         'message': msg
     }
 
