@@ -1,4 +1,6 @@
+import pymysql
 import pytz
+import sys
 from contextlib import contextmanager
 from . import time_helper
 
@@ -40,8 +42,15 @@ class MySQL:
 
     def enable_logs(self):
         with self.transact() as cursor:
-            cursor.execute("SET GLOBAL log_output = 'TABLE'")
-            cursor.execute("SET GLOBAL general_log = 'ON'")
+            try:
+                cursor.execute("SET GLOBAL log_output = 'TABLE'")
+                cursor.execute("SET GLOBAL general_log = 'ON'")
+            except pymysql.err.DatabaseError as err:
+                code = err.args[0]
+                if code == pymysql.constants.ER.SPECIFIC_ACCESS_DENIED_ERROR:
+                    print("Unable to enable logging in MySQL - you will need to ensure that it's enabled.", file=sys.stderr)
+                else:
+                    raise
 
     def clear_logs(self):
         with self.transact() as cursor:

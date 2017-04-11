@@ -57,6 +57,19 @@ def test_mysql_to_cw_log_event_no_tz():
         'message': 'Query: SELECT * FROM sometable'
     }
 
+def test_enable_logs_permission_denied(db):
+    with db.transact() as cursor:
+        cursor.execute("CREATE USER IF NOT EXISTS 'nonsuper'@'%'")
+        cursor.execute("GRANT SELECT ON *.* TO 'nonsuper'@'%'")
+
+    conn2 = pymysql.connect(host='mysql', db='mysql', user='nonsuper')
+    try:
+        db2 = mysql.MySQL(conn2)
+        db2.enable_logs()
+        # shouldn't raise exception
+    finally:
+        conn2.close()
+
 def test_clear_logs(db):
     with db.transact() as cursor:
         cursor.execute("SELECT * FROM general_log")

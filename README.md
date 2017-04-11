@@ -4,7 +4,7 @@ This is a script that grabs logs from MySQL and sends them to CloudWatch Logs.
 
 ## Setup
 
-1. Enable the desired logs. More information:
+1. Enable the desired logs. The script will attempt to do so for you, but may fail (gracefully), based on if the user has permissions or not. More information:
     * [Amazon Web Services (AWS) Relational Database Service (RDS)](http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_LogAccess.Concepts.MySQL.html)
     * [MySQL (self-hosted)](https://dev.mysql.com/doc/refman/5.7/en/server-logs.html)
 1. Create [a `.env` file](https://docs.docker.com/compose/environment-variables/#the-env-file) with your AWS connection information and other environment variables. See [`docker-compose.yml`](docker-compose.yml) for the list of supported variables.
