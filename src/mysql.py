@@ -36,16 +36,23 @@ class MySQL:
             cursor.execute("SELECT COUNT(*) FROM general_log")
             return cursor.fetchone()[0]
 
-    def get_general_log_events(self, since):
+    def get_general_log_events(self, since, limit=1000):
         """Returns them in CloudWatch Logs format."""
 
         with self.conn.cursor() as cursor:
             print("Retrieving events since {:%Y-%m-%d %H:%M:%S}...".format(since))
+            # TODO remove hack for only being able to upload < 10000 events at a time
+            # http://stackoverflow.com/a/12125925/358804
             cursor.execute("""
-                SELECT event_time, command_type, argument
-                FROM general_log
-                WHERE event_time > %s
-                """, (since,))
+                SELECT * FROM (
+                    SELECT event_time, command_type, argument
+                    FROM general_log
+                    WHERE event_time > %s
+                    ORDER BY event_time DESC
+                    LIMIT %s
+                ) sub
+                ORDER BY event_time ASC
+                """, (since, limit,))
 
             events = map(mysql_to_cw_log_event, cursor)
             return list(events)

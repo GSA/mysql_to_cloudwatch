@@ -53,11 +53,16 @@ def test_get_general_log_events(conn, db):
 
     events = db.get_general_log_events(since)
 
-    for i in range(num_queries):
-        event = events[BASELINE_NUM_EVENTS + i]
-        actual = event['message']
-        expected = "Query: {}".format(queries[i])
-        assert actual == expected
+def test_get_general_log_events_limit(conn, db):
+    with conn.cursor() as cursor:
+        for i in range(6):
+            cursor.execute("SELECT 1")
+        conn.commit()
+    since = datetime.datetime.utcfromtimestamp(0)
+
+    limit = 2
+    events = db.get_general_log_events(since, limit=limit)
+    assert len(events) == limit
 
 def test_get_general_log_events_empty(db):
     since = datetime.datetime.utcfromtimestamp(0)
