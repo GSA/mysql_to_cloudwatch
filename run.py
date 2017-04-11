@@ -1,3 +1,4 @@
+import boto3
 # https://pymysql.readthedocs.io/en/latest/
 import pymysql
 import os
@@ -19,7 +20,8 @@ if __name__ == '__main__':
     conn = pymysql.connect(**DB_KWARGS)
     db = mysql.MySQL(conn)
 
-    cw = cloudwatch.CloudWatch(LOG_GROUP_NAME, LOG_STREAM_NAME)
+    cw_client = boto3.client('logs')
+    cw = cloudwatch.CloudWatch(cw_client, LOG_GROUP_NAME, LOG_STREAM_NAME)
 
     integration.set_up_logs(db, cw)
     integration.run(db, cw)

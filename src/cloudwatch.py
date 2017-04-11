@@ -1,10 +1,9 @@
-import boto3
 import datetime
 
 
 class CloudWatch:
-    def __init__(self, group, stream):
-        self.client = boto3.client('logs')
+    def __init__(self, client, group, stream):
+        self.client = client
         self.group = group
         self.stream = stream
 
@@ -52,7 +51,12 @@ class CloudWatch:
 
         return datetime.datetime.utcfromtimestamp(timestamp)
 
-    def upload_logs(self, events, seq_token=None):
+    def upload_logs(self, events):
+        # CloudWatch Logs complains if trying to send zero events
+        # http://docs.aws.amazon.com/AmazonCloudWatchLogs/latest/APIReference/API_PutLogEvents.html#CWL-PutLogEvents-request-logEvents
+        if not events:
+            return
+
         print("Uploading {:d} events...".format(len(events)))
 
         # http://stackoverflow.com/a/8686243/358804
@@ -61,6 +65,7 @@ class CloudWatch:
             'logStreamName': self.stream,
             'logEvents': events
         }
+        seq_token = self.get_seq_token()
         if seq_token:
             log_args['sequenceToken'] = seq_token
 
