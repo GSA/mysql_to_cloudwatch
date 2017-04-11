@@ -61,7 +61,7 @@ def test_get_general_log_events(conn, db):
         for query in queries:
             cursor.execute(query)
         conn.commit()
-    since = datetime.utcfromtimestamp(0)
+    since = datetime.fromtimestamp(0, timezone.utc)
 
     events = db.get_general_log_events(since)
 
@@ -70,13 +70,13 @@ def test_get_general_log_events_limit(conn, db):
         for i in range(6):
             cursor.execute("SELECT 1")
         conn.commit()
-    since = datetime.utcfromtimestamp(0)
+    since = datetime.fromtimestamp(0, timezone.utc)
 
     limit = 2
     events = db.get_general_log_events(since, limit=limit)
     assert len(events) == limit
 
 def test_get_general_log_events_empty(db):
-    since = datetime.utcfromtimestamp(0)
+    since = datetime.fromtimestamp(0, timezone.utc)
     events = db.get_general_log_events(since)
     assert len(events) == BASELINE_NUM_EVENTS + 1
