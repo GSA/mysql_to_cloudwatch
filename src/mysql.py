@@ -40,17 +40,32 @@ class MySQL:
             yield cursor
             self.conn.commit()
 
-    def enable_logs(self):
-        with self.transact() as cursor:
+    def get_global(self, cursor, var):
+        # "This statement does not require any privilege", so no need to handle permissions issues.
+        # https://dev.mysql.com/doc/refman/5.7/en/show-variables.html
+        cursor.execute("SELECT @@GLOBAL.%s", (var,))
+        return cursor.fetchone()[0]
+
+    def set_global(self, cursor, var, val, alt_value=None):
+        current = self.get_global(cursor, var)
+        if current == val or (alt_value and current == alt_value):
+            print("{} already set to {}.".format(var, val))
+        else:
+            print("Setting {}={}...".format(var, val))
             try:
-                cursor.execute("SET GLOBAL log_output = 'TABLE'")
-                cursor.execute("SET GLOBAL general_log = 'ON'")
+                # http://stackoverflow.com/a/10077141/358804
+                cursor.execute("SET GLOBAL {} = {}".format(var, val))
             except pymysql.err.DatabaseError as err:
                 code = err.args[0]
                 if code == pymysql.constants.ER.SPECIFIC_ACCESS_DENIED_ERROR:
-                    print("Unable to enable logging in MySQL - you will need to ensure that it's enabled.", file=sys.stderr)
+                    print("Unable to set {}={} in MySQL - you will need to do so externally.".format(var, val), file=sys.stderr)
                 else:
                     raise
+
+    def enable_logs(self):
+        with self.transact() as cursor:
+            self.set_global(cursor, 'log_output', 'TABLE')
+            self.set_global(cursor, 'general_log', 'ON', alt_value=1)
 
     def clear_logs(self):
         with self.transact() as cursor:
