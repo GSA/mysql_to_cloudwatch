@@ -39,7 +39,7 @@ def submit_events_to_cloudwatch(events, cw_client, group, stream, chunk_size=500
                except:
                      if chunk_size == 1:
                            print('Ignoring exception: ', traceback.format_exc())
-                     else
+                     else:
                            submit_events_to_cloudwatch(chunk, group, stream, int(chunk_size/2)) 
         
 def run(db, cw_client, group, stream):
