@@ -1,58 +1,56 @@
-def datetime_to_ms_since_epoch(dt):
-    return int(dt.timestamp() * 1000.0)
+import pytz
+from . import time_helper
+
+
+def enable_logs(db):
+    with db.cursor() as cursor:
+        cursor.execute("SET GLOBAL log_output = 'TABLE'")
+        cursor.execute("SET GLOBAL general_log = 'ON'")
+        db.commit()
 
 def mysql_to_cw_log_event(row):
     event_time = row[0]
     cmd = row[1]
-    query = row[2].decode("utf-8")
+    query = row[2]
+
+    # normalize data
+    if not event_time.tzname():
+        # assume UTC
+        event_time = pytz.utc.localize(event_time)
+    if hasattr(query, 'decode'):
+        # convert from byte array
+        query = query.decode()
 
     msg = cmd
     if query:
         msg += ': ' + query
 
     return {
-        'timestamp': datetime_to_ms_since_epoch(event_time),
+        'timestamp': time_helper.datetime_to_ms_since_epoch(event_time),
         'message': msg
     }
 
-class MySQL:
-    def __init__(self, conn):
-        self.conn = conn
+def get_general_log_events(db, since):
+    """Returns them in CloudWatch Logs format."""
 
-    def enable_logs(self):
-        with self.conn.cursor() as cursor:
-            cursor.execute("SET GLOBAL log_output = 'TABLE'")
-            cursor.execute("SET GLOBAL general_log = 'ON'")
-            self.conn.commit()
+    with db.cursor() as cursor:
+        print("Retrieving events from MySQL since {}...".format(time_helper.datetime_str(since)))
+        # TODO remove hack for only being able to upload < 10000 events at a time
+        # http://stackoverflow.com/a/12125925/358804
+        cursor.execute("""
+            SELECT * FROM (
+                SELECT event_time, command_type, argument
+                FROM general_log
+                WHERE event_time > %s
+                #ORDER BY event_time DESC
+                #LIMIT 1000
+            ) sub
+            ORDER BY event_time ASC
+            """, (since,))
 
-    def clear_logs(self):
-        with self.conn.cursor() as cursor:
-            # http://stackoverflow.com/a/12247102/358804
-            cursor.execute("TRUNCATE TABLE general_log")
-            self.conn.commit()
+        events = map(mysql_to_cw_log_event, cursor)
+        return list(events)
 
-    def num_log_events(self):
-        with self.conn.cursor() as cursor:
-            cursor.execute("SELECT COUNT(*) FROM general_log")
-            return cursor.fetchone()[0]
-
-    def get_general_log_events(self, since, limit=1000):
-        """Returns them in CloudWatch Logs format."""
-
-        with self.conn.cursor() as cursor:
-            print("Retrieving events since {:%Y-%m-%d %H:%M:%S}...".format(since))
-            # TODO remove hack for only being able to upload < 10000 events at a time
-            # http://stackoverflow.com/a/12125925/358804
-            cursor.execute("""
-                SELECT * FROM (
-                    SELECT event_time, command_type, argument
-                    FROM general_log
-                    WHERE event_time > %s
-                    ORDER BY event_time DESC
-                    LIMIT %s
-                ) sub
-                ORDER BY event_time ASC
-                """, (since, limit,))
-
-            events = map(mysql_to_cw_log_event, cursor)
-            return list(events)
+def rotate_general_logs_table(db):
+    with db.cursor() as cursor:
+        cursor.callproc("""rds_rotate_general_log""")
