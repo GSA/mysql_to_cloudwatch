@@ -28,16 +28,20 @@ def copy_general_logs(db, cw_client, group, stream, since, seq_token=None):
     # CloudWatch Logs complains if trying to send zero events
     if events:
         mysql.rotate_general_logs_table(db)
-        chunk_size=500
+        submit_events_to_cloudwatch(events, cw_client, group, stream)
+
+def submit_events_to_cloudwatch(events, cw_client, group, stream, chunk_size=500):
+   if events:
         for chunk in [events[i:i + chunk_size] for i in range(0, len(events), chunk_size)]:
                seq_token = cloudwatch.get_seq_token(cw_client, group, stream)
                try:
                      cloudwatch.upload_logs(cw_client, group, stream, chunk, seq_token=seq_token)
                except:
-                     print('Ignoring exception: ', traceback.format_exc())
-        #mysql.rotate_general_logs_table(db)
-        #cloudwatch.upload_logs(cw_client, group, stream, events, seq_token=seq_token)
-
+                     if chunk_size =< 1:
+                           print('Ignoring exception: ', traceback.format_exc())
+                     else
+                           submit_events_to_cloudwatch(chunk, group, stream, int(chunk_size/2)) 
+        
 def run(db, cw_client, group, stream):
     since = cloudwatch.get_latest_cw_event(cw_client, group, stream)
     time_helper.validate_time_zone(since)
