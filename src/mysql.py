@@ -7,7 +7,12 @@ def datetime_to_ms_since_epoch(dt):
 def mysql_to_cw_log_event(row):
     event_time = row[0]
     cmd = row[1]
-    query = row[2].decode("utf-8")
+    query = row[2]
+
+    # normalize data - seems to be inconsistent coming from MySQL
+    if hasattr(query, 'decode'):
+        # convert from byte array
+        query = query.decode()
 
     msg = cmd
     if query:

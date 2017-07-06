@@ -21,7 +21,19 @@ def db(conn):
     db.clear_logs()
     return db
 
-def test_mysql_to_cw_log_event():
+def test_mysql_to_cw_log_event_string():
+    row = [
+        datetime.datetime.utcfromtimestamp(1000),
+        'Query',
+        'SELECT * FROM sometable'
+    ]
+    result = mysql.mysql_to_cw_log_event(row)
+    assert result == {
+        'timestamp': 1000000,
+        'message': 'Query: SELECT * FROM sometable'
+    }
+
+def test_mysql_to_cw_log_event_bytes():
     row = [
         datetime.datetime.utcfromtimestamp(1000),
         'Query',
