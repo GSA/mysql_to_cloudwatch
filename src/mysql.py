@@ -1,11 +1,17 @@
 import pytz
+from contextlib import contextmanager
 from . import time_helper
 
 
 def mysql_to_cw_log_event(row):
     event_time = row[0]
     cmd = row[1]
-    query = row[2].decode("utf-8")
+    query = row[2]
+
+    # normalize data - seems to be inconsistent coming from MySQL
+    if hasattr(query, 'decode'):
+        # convert from byte array
+        query = query.decode()
 
     if not event_time.tzname():
         # assume UTC
@@ -24,27 +30,33 @@ class MySQL:
     def __init__(self, conn):
         self.conn = conn
 
-    def enable_logs(self):
+    @contextmanager
+    def transact(self):
+        """Run a block within a transaction."""
+
         with self.conn.cursor() as cursor:
+            yield cursor
+            self.conn.commit()
+
+    def enable_logs(self):
+        with self.transact() as cursor:
             cursor.execute("SET GLOBAL log_output = 'TABLE'")
             cursor.execute("SET GLOBAL general_log = 'ON'")
-            self.conn.commit()
 
     def clear_logs(self):
-        with self.conn.cursor() as cursor:
+        with self.transact() as cursor:
             # http://stackoverflow.com/a/12247102/358804
             cursor.execute("TRUNCATE TABLE general_log")
-            self.conn.commit()
 
     def num_log_events(self):
-        with self.conn.cursor() as cursor:
+        with self.transact() as cursor:
             cursor.execute("SELECT COUNT(*) FROM general_log")
             return cursor.fetchone()[0]
 
     def get_general_log_events(self, since, limit=1000):
         """Returns them in CloudWatch Logs format."""
 
-        with self.conn.cursor() as cursor:
+        with self.transact() as cursor:
             print("Retrieving events from MySQL since {}...".format(time_helper.datetime_str(since)))
             # TODO remove hack for only being able to upload < 10000 events at a time
             # http://stackoverflow.com/a/12125925/358804
