@@ -1,8 +1,7 @@
+import pytz
 from contextlib import contextmanager
+from . import time_helper
 
-
-def datetime_to_ms_since_epoch(dt):
-    return int(dt.timestamp() * 1000.0)
 
 def mysql_to_cw_log_event(row):
     event_time = row[0]
@@ -14,12 +13,16 @@ def mysql_to_cw_log_event(row):
         # convert from byte array
         query = query.decode()
 
+    if not event_time.tzname():
+        # assume UTC
+        event_time = pytz.utc.localize(event_time)
+
     msg = cmd
     if query:
         msg += ': ' + query
 
     return {
-        'timestamp': datetime_to_ms_since_epoch(event_time),
+        'timestamp': time_helper.datetime_to_ms_since_epoch(event_time),
         'message': msg
     }
 
@@ -54,7 +57,7 @@ class MySQL:
         """Returns them in CloudWatch Logs format."""
 
         with self.transact() as cursor:
-            print("Retrieving events since {:%Y-%m-%d %H:%M:%S}...".format(since))
+            print("Retrieving events from MySQL since {}...".format(time_helper.datetime_str(since)))
             # TODO remove hack for only being able to upload < 10000 events at a time
             # http://stackoverflow.com/a/12125925/358804
             cursor.execute("""

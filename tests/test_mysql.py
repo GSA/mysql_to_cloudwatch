@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 import pymysql
 import pytest
 from ..src import mysql
@@ -23,7 +23,7 @@ def db(conn):
 
 def test_mysql_to_cw_log_event_string():
     row = [
-        datetime.datetime.utcfromtimestamp(1000),
+        datetime.utcfromtimestamp(1000),
         'Query',
         'SELECT * FROM sometable'
     ]
@@ -35,7 +35,19 @@ def test_mysql_to_cw_log_event_string():
 
 def test_mysql_to_cw_log_event_bytes():
     row = [
-        datetime.datetime.utcfromtimestamp(1000),
+        datetime.fromtimestamp(1000, timezone.utc),
+        'Query',
+        'SELECT * FROM sometable'.encode()
+    ]
+    result = mysql.mysql_to_cw_log_event(row)
+    assert result == {
+        'timestamp': 1000000,
+        'message': 'Query: SELECT * FROM sometable'
+    }
+
+def test_mysql_to_cw_log_event_no_tz():
+    row = [
+        datetime.fromtimestamp(1000),
         'Query',
         'SELECT * FROM sometable'.encode()
     ]
@@ -59,7 +71,7 @@ def test_get_general_log_events(db):
     with db.transact() as cursor:
         for query in queries:
             cursor.execute(query)
-    since = datetime.datetime.utcfromtimestamp(0)
+    since = datetime.fromtimestamp(0, timezone.utc)
 
     events = db.get_general_log_events(since)
 
@@ -67,13 +79,13 @@ def test_get_general_log_events_limit(db):
     with db.transact() as cursor:
         for i in range(6):
             cursor.execute("SELECT 1")
-    since = datetime.datetime.utcfromtimestamp(0)
+    since = datetime.fromtimestamp(0, timezone.utc)
 
     limit = 2
     events = db.get_general_log_events(since, limit=limit)
     assert len(events) == limit
 
 def test_get_general_log_events_empty(db):
-    since = datetime.datetime.utcfromtimestamp(0)
+    since = datetime.fromtimestamp(0, timezone.utc)
     events = db.get_general_log_events(since)
     assert len(events) == BASELINE_NUM_EVENTS + 1
