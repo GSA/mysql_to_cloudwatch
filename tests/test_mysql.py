@@ -57,6 +57,30 @@ def test_mysql_to_cw_log_event_no_tz():
         'message': 'Query: SELECT * FROM sometable'
     }
 
+def test_enable_logs_skip_if_enabled(db):
+    start = datetime.now(tz=timezone.utc)
+
+    db.enable_logs()
+
+    events = db.get_general_log_events(start)
+    print(events)
+    for event in events:
+        assert 'SET ' not in event['message']
+
+def test_enable_logs_permission_denied(db):
+    with db.transact() as cursor:
+        cursor.execute("SET GLOBAL general_log = 'OFF'")
+        cursor.execute("CREATE USER IF NOT EXISTS 'nonsuper'@'%'")
+        cursor.execute("GRANT SELECT ON *.* TO 'nonsuper'@'%'")
+
+    conn2 = pymysql.connect(host='mysql', db='mysql', user='nonsuper')
+    try:
+        db2 = mysql.MySQL(conn2)
+        db2.enable_logs()
+        # shouldn't raise exception
+    finally:
+        conn2.close()
+
 def test_clear_logs(db):
     with db.transact() as cursor:
         cursor.execute("SELECT * FROM general_log")
@@ -74,6 +98,7 @@ def test_get_general_log_events(db):
     since = datetime.fromtimestamp(0, timezone.utc)
 
     events = db.get_general_log_events(since)
+    # TODO assert
 
 def test_get_general_log_events_limit(db):
     with db.transact() as cursor:
