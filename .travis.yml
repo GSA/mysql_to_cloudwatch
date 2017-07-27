@@ -8,4 +8,4 @@ script:
   - docker --version
   - cd tests
   - docker-compose up -d mysql
-  - docker-compose up tests
+  - docker-compose run tests

@@ -15,10 +15,11 @@ This is a script that grabs logs from MySQL and sends them to CloudWatch Logs.
 ```sh
 cd tests
 
-docker-compose up -d mysql
-# alternatively, run in a separate terminal without the `-d`
+docker-compose up mysql
+# this will print out a bunch of junk you can probably ignore
 
-docker-compose up tests
+# in another terminal
+docker-compose run tests
 ```
 
 ## Troubleshooting
