@@ -54,7 +54,7 @@ class MySQL:
             print("Setting {}={}...".format(var, val))
             try:
                 # http://stackoverflow.com/a/10077141/358804
-                cursor.execute("SET GLOBAL {} = {}".format(var, val))
+                cursor.execute("SET GLOBAL {} = %s".format(var), (val, ))
             except pymysql.err.DatabaseError as err:
                 code = err.args[0]
                 if code == pymysql.constants.ER.SPECIFIC_ACCESS_DENIED_ERROR:
